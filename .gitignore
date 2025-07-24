@@ -1,0 +1,8 @@
+# .gitignore
+*.pkl
+*.npy
+*.tif
+*.csv
+output/
+logs/
+__pycache__/

@@ -1,0 +1,8 @@
+# EXP_NAME: 'YOUR_EXPERIMENT_NAME'
+# RNG_SEED: 1
+DATASET:
+  NAME: TOGO
+  ROOT_DIR: '/Users/liviabetti/Desktop/togo_experiments/'
+  RESAMPLED_CSV: 'togo_soil_fertility_resampled.csv'
+  FEATURE_FILE: '/Users/liviabetti/Desktop/togo_experiments/planet_medres_normalized_analytic_2020-09_mosaic_features.feather'
+  IS_FEATHER: True

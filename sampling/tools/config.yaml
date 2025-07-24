@@ -1,0 +1,64 @@
+ACTIVE_LEARNING:
+  DISTANCE_MATRIX_PATH: null
+  LSET_PATH: ''
+  OPT: false
+  RANDOM_STRATEGY: point
+  SAMPLING_FN: random
+  SIMILARITY_MATRIX_PATH: null
+  USET_PATH: ''
+  UTIL_LAMBDA: null
+CFG_DEST: config.yaml
+COST:
+  ARRAY: null
+  FN: null
+  NAME: null
+  UNIT_COST_PATH: null
+DATASET:
+  ACCEPTED:
+  - USAVARS_POP
+  - USAVARS_TC
+  - USAVARS_EL
+  - USAVARS_INC
+  - INDIA_SECC
+  - TOGO
+  FEATURE_FILE: /Users/liviabetti/Desktop/togo_experiments/planet_medres_normalized_analytic_2020-09_mosaic_features.feather
+  IS_FEATHER: true
+  LABEL: null
+  NAME: TOGO
+  RESAMPLED_CSV: togo_soil_fertility_resampled.csv
+  ROOT_DIR: /Users/liviabetti/Desktop/togo_experiments
+EPISODE_DIR: ''
+EXP_DIR: ''
+EXP_NAME: auto
+EXP_ROOT: ''
+GROUPS:
+  GROUP_ASSIGNMENT: null
+  GROUP_TYPE: null
+ID_PATH: null
+INITIAL_SET:
+  STR: null
+INITIAL_SET_DIR: ''
+LOG_DEST: file
+LSET_IDS: []
+MODEL: {}
+NUM_GPUS: 1
+OPTIM:
+  ALPHAS: []
+  CV: true
+OUT_DIR: ../../output
+REGIONS:
+  IN_REGION_UNIT_COST: null
+  OUT_OF_REGION_UNIT_COST: null
+  REGION_ASSIGNMENT: null
+  TYPE: null
+RNG_SEED: null
+SAMPLING_DIR: ''
+TEST:
+  DATASET: ''
+TRAIN:
+  DATASET: ''
+  SPLIT: train
+UNITS:
+  POINTS_PER_UNIT: null
+  TYPE: null
+  UNIT_ASSIGNMENT: null
