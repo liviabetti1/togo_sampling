@@ -66,7 +66,6 @@ def compute_or_load_distances_to_urban(gdf_points, gdf_urban_top, dist_path, id_
         point_geoms,
         urban_geoms
     )
-    from IPython import embed; embed()
     id_array = gdf_points[id_col].astype(str).to_numpy()
     distance_dict = dict(zip(id_array, distances))
 

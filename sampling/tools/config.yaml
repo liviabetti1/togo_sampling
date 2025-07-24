@@ -21,12 +21,12 @@ DATASET:
   - USAVARS_INC
   - INDIA_SECC
   - TOGO
-  FEATURE_FILE: /Users/liviabetti/Desktop/togo_experiments/planet_medres_normalized_analytic_2020-09_mosaic_features.feather
+  FEATURE_FILE: /Users/liviabetti/Desktop/togo_experiments_with_data/planet_medres_normalized_analytic_2020-09_mosaic_features.feather
   IS_FEATHER: true
   LABEL: null
   NAME: TOGO
   RESAMPLED_CSV: togo_soil_fertility_resampled.csv
-  ROOT_DIR: /Users/liviabetti/Desktop/togo_experiments
+  ROOT_DIR: /Users/liviabetti/Desktop/togo_experiments_with_data
 EPISODE_DIR: ''
 EXP_DIR: ''
 EXP_NAME: auto
