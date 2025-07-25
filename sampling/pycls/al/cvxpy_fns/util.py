@@ -8,40 +8,52 @@ def greedy(s):
     return cp.sum(s)
 
 #Workshop paper objective (from rep. matters paper)
-def pop_risk(s, units, groups, l=0.5):
+def pop_risk(s, groups_per_unit, l=0.5):
     """
     Compute weighted risk over groups from input values and group labels,
     using group weights proportional to group frequency in `groups`.
-    
+
     Args:
-        x: cp.array of values (e.g., weights or indicators)
-        groups: numpy array of group labels
+        s: cp.Variable over units (e.g., binary indicators or weights)
+        groups_per_unit: list of dicts; each dict maps group → count
         l: weighting parameter in [0,1]
-        
+
     Returns:
         scalar risk value (cp scalar)
     """
     print(f"Population risk utility function with lambda={l}")
-    unique_groups, group_counts = np.unique(groups, return_counts=True)
-    group_weights = cp.Constant(group_counts / group_counts.sum())  #proportions
     
-    if s.shape[0] == len(groups):
-        group_sizes = cp.hstack([cp.sum(s[groups == g]) for g in unique_groups])
-    else: #make note of how this is done
-        unique_groups, group_idx = np.unique(groups, return_inverse=True)
-        unique_units, unit_idx = np.unique(units, return_inverse=True)
-        
-        A_np = np.zeros((len(unique_groups), len(unique_units)), dtype=int)
-        np.add.at(A_np, (group_idx, unit_idx), 1) 
+    num_units = len(groups_per_unit)
+    all_groups = sorted({g for unit_pair in groups_per_unit for (g, _) in unit_pair})
+    group_to_idx = {g: i for i, g in enumerate(all_groups)}
+    num_groups = len(all_groups)
 
-        A = cp.Constant(A_np)
-        group_sizes = A @ s  #this does not take into account points per cluster, but might not have to
+    group_counts = np.zeros(num_groups, dtype=int)
+    for unit_pair in groups_per_unit:
+        for (group, count) in unit_pair:
+            group_idx = group_to_idx[group]
+            group_counts[group_idx] += count
+    print(group_counts)
+
+    group_weights_np = group_counts / group_counts.sum()
+    group_weights = cp.Constant(group_weights_np)
+
+    A_np = np.zeros((num_groups, num_units), dtype=int)
+    for unit_idx, unit_pair in enumerate(groups_per_unit):
+        for (group, count) in unit_pair:
+            group_idx = group_to_idx[group]
+            A_np[group_idx, unit_idx] = count
+
+    A = cp.Constant(A_np)
+
+    group_sizes = A @ s
     total_size = cp.sum(group_sizes)
-    
-    # risk per group: l*(1/sqrt(nj)) + (1-l)*(1/sqrt(n))
+
     group_risks = l * cp.inv_pos(cp.sqrt(group_sizes)) + (1 - l) * cp.inv_pos(cp.sqrt(total_size))
     weighted_risks = cp.multiply(group_weights, group_risks)
-    return -cp.sum(weighted_risks) #negative since opt will maximize this
+    
+    return -cp.sum(weighted_risks)  #negative so optimization will maximize this
+
 
 def similarity(s, similarity_matrix):
     test_similarity = similarity_matrix.sum(axis=1) #this sums the similarity for now, might want to change to softmax

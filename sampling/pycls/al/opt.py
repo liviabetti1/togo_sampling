@@ -93,6 +93,33 @@ class Opt:
 
         return region_per_unit
     
+    def _get_group_per_unit(self):
+        groups_per_unit = {}
+
+        for u in self.units:
+            indices = np.where(self.unit_assignment == u)[0]
+            groups = self.group_assignment[indices]
+            unique_groups, counts = np.unique(groups, return_counts=True)
+            
+            groups_per_unit[u] = list(zip(unique_groups, counts))
+
+        return groups_per_unit
+    
+    def _get_cost_per_unit(self):
+        cost_per_unit = {}
+
+        for u in self.units:
+            indices = np.where(self.unit_assignment == u)[0]
+            regions = self.cost_assignment[indices]
+            unique_regions = np.unique(regions)
+
+            if len(unique_regions) > 1:
+                raise ValueError(f"Unit {u} has inconsistent region assignments: {unique_regions}")
+            
+            cost_per_unit[u] = unique_regions[0]
+
+        return cost_per_unit
+    
     def _compute_unit_to_indices(self):
         return {
             u: self.relevant_indices[self.unit_assignment == u]
@@ -112,8 +139,10 @@ class Opt:
             self.group_assignment = np.array(self.cfg.GROUPS.GROUP_ASSIGNMENT)
 
             self.group_assignment = self.group_assignment[self.relevant_indices]
+            self.group_assignment_per_unit = self._get_group_per_unit()
+            self.group_assignments_per_unit = [self.group_assignment_per_unit[u] for u in self.units]
 
-            self.utility_func = lambda s: util.pop_risk(s, self.unit_assignment, self.group_assignment, l=self.cfg.ACTIVE_LEARNING.UTIL_LAMBDA)
+            self.utility_func = lambda s: util.pop_risk(s, self.group_assignments_per_unit, l=self.cfg.ACTIVE_LEARNING.UTIL_LAMBDA)
         elif utility_func_type == "similarity":
             assert self.cfg.ACTIVE_LEARNING.SIMILARITY_MATRIX_PATH is not None, "Need to specify similarity matrix path"
             similarity_matrix = np.load(self.cfg.ACTIVE_LEARNING.SIMILARITY_MATRIX_PATH)['arr_0']
@@ -138,20 +167,27 @@ class Opt:
         self.np_cost_func = NP_COST_FNS[cost_func_type]
         
         if cost_func_type == "pointwise_by_array":
+            print("COST FUNCTION BY ARRAY")
             if self.cfg.COST.UNIT_COST_PATH is not None:
                 with open(self.cfg.COST.UNIT_COST_PATH, "rb") as f:
                     self.cost_dict = dill.load(f)
                 self.cost_array = np.array([self.cost_dict[u] for u in self.units])
             elif self.cfg.COST.ARRAY is not None:
-                self.cost_array = np.array(self.cfg.COST.ARRAY)
-                self.cost_array = self.cost_array[self.units]
+                self.unit_assignment = self.relevant_indices.copy()
+                self.units = np.unique(self.unit_assignment)
+                cost_array = np.array(self.cfg.COST.ARRAY)
+                self.cost_assignment = cost_array[self.relevant_indices] #check this
+
+                self.cost_assignment_per_unit = self._get_cost_per_unit()
+                self.cost_array_per_unit = np.array([self.cost_assignment_per_unit[u] for u in self.units])
             else:
                 raise(AssertionError)
 
-            self.cost_func = lambda s: cost.pointwise_by_array(s, self.cost_array)
-            self.np_cost_func = lambda s: np_cost.pointwise_by_array(s, self.cost_array)
+            self.cost_func = lambda s: cost.pointwise_by_array(s, self.cost_array_per_unit)
+            self.np_cost_func = lambda s: np_cost.pointwise_by_array(s, self.cost_array_per_unit)
 
         elif cost_func_type == "region_aware_unit_cost":
+            print("COST FUNCTION BY REGION")
             in_labeled_set_unit_array = np.array([int(u in set(self.labeled_unit_set)) for u in self.units])
             self._set_region_assignment()
 
@@ -173,6 +209,8 @@ class Opt:
 
         #make labeled inclusion vector of units
         unit_inclusion_vector = self.labeled_unit_vector.copy()
+
+        print(f"Running opt with variable of size {len(self.units)}")
 
         n = len(self.units)
         s = cp.Variable(n, nonneg=True)
@@ -242,11 +280,11 @@ class Opt:
         np.random.seed(self.seed)
         unit_inclusion_vector = self.labeled_unit_vector.copy()
 
-        probs = self._load_probabilities()
-        if probs is None:
-            probs = self.solve_opt()
-            probs = np.clip(probs, 0.0, 1.0) # handle floating point issues
-            self._save_probabilities(probs)
+        #probs = self._load_probabilities()
+        #if probs is None:
+        probs = self.solve_opt()
+        probs = np.clip(probs, 0.0, 1.0) # handle floating point issues
+        self._save_probabilities(probs)
 
         shuffled_unit_indices = np.arange(len(self.units))
         np.random.shuffle(shuffled_unit_indices)
@@ -259,8 +297,7 @@ class Opt:
 
             if draw == 1:
                 unit_inclusion_vector[unit_idx] = 1
-                total_cost = self.np_cost_func(unit_inclusion_vector)
-                print(f"Total Cost: {total_cost}")
+                total_cost = self.np_cost_func(unit_inclusion_vector) - self.np_cost_func(self.labeled_unit_vector)
 
                 if total_cost > self.budget + self.np_cost_func(self.labeled_unit_vector):
                     unit_inclusion_vector[unit_idx] = 0
@@ -273,7 +310,6 @@ class Opt:
         activeSet = []
         for u in selected_units:
             available_idxs = self.unit_to_indices[u]
-            print(f"Available Indices: {available_idxs}")
             unlabeled_idxs = [idx for idx in available_idxs if idx in self.uSet]
 
             if self.points_per_unit is None:
@@ -283,7 +319,6 @@ class Opt:
             else:
                 selected_points = np.random.choice(unlabeled_idxs, size=self.points_per_unit, replace=False)
 
-            print(f"Adding {selected_points} to activeSet")
             activeSet.extend(selected_points)
 
         activeSet = np.array(sorted(set(activeSet)))
